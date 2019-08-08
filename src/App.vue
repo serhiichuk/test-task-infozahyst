@@ -98,6 +98,7 @@
                     firstName:   '',
                     lastName:    '',
                     age:         '',
+                    height:      '',
                     email:       '',
                     importance:  '',
                     jobPosition: '',
