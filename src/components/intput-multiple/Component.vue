@@ -15,21 +15,21 @@
         props: {
             value: {
                 required: true,
-                type:     Array
-            }
+                type:     Array,
+            },
         },
 
         data() {
             return {
-                inputs: this.value.map(value => ({ value, id: _.uniqueId() }))
+                inputs: this.value.map(value => ({ value, id: _.uniqueId() })),
             };
         },
 
         watch: {
             inputs: {
                 deep:    true,
-                handler: 'onChangeInputs'
-            }
+                handler: 'onChangeInputs',
+            },
         },
 
         methods: {
@@ -49,8 +49,8 @@
              */
             onRemoveInput(inputId) {
                 this.inputs = this.inputs.filter(input => input.id !== inputId);
-            }
-        }
+            },
+        },
     };
 </script>
 

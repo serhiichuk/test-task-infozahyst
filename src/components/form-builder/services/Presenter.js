@@ -4,6 +4,6 @@ export default class Presenter {
     }
 
     presentate() {
-        return []
+        return [];
     }
 }

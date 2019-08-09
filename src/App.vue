@@ -38,7 +38,7 @@
             validation: {
                 max: 120,
                 min: 18,
-            }
+            },
         },
         {
             title:      'Ріст',
@@ -47,7 +47,7 @@
             validation: {
                 max: 250,
                 min: 50,
-            }
+            },
         },
         {
             title:      'Email',

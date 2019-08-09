@@ -1,8 +1,9 @@
 <template>
-    <el-form :id="config.code" :model="form" :rules="validationRules">
+    <el-form :id="config.code" :model="form" :rules="validationRules" ref="form">
         <el-form-item
                 v-for="(item, code) in viewData"
                 :key="code"
+                :prop="code"
                 :label="item.label"
                 :required="item.required"
         >
@@ -25,10 +26,43 @@
 </template>
 
 <script>
-    import _ from 'lodash';
-
-    import FormBuilderConfig, { CONFIG_ITEM_TYPE_MAP } from './services/FormBuilderConfig';
+    import FormBuilderConfig, { CONFIG_ITEM_TYPE_MAP, ENUM_TYPES } from './services/FormBuilderConfig';
     import InputMultiple from '@/components/intput-multiple';
+
+    /**
+     * @param {object[]} enumList
+     * @returns {object[]}
+     */
+    function normalizeEnumListToOptions(enumList) {
+        const idToIndexMap = {};
+        const options      = [];
+        const result       = [];
+
+        for (let i = 0; i < enumList.length; i += 1) {
+            idToIndexMap[enumList[i].id] = i;
+            options.push({
+                value:    enumList[i].id,
+                label:    enumList[i].title,
+                parentId: enumList[i].parentId,
+            });
+        }
+
+        for (let i = 0; i < options.length; i += 1) {
+            const node = options[i];
+
+            if (node.parentId) {
+                if (!options[idToIndexMap[node.parentId]].children) {
+                    options[idToIndexMap[node.parentId]].children = [];
+                }
+
+                options[idToIndexMap[node.parentId]].children.push(node);
+            } else {
+                result.push(node);
+            }
+        }
+
+        return result;
+    }
 
     export default {
         name: 'FormBuilder',
@@ -53,11 +87,14 @@
         },
 
         computed: {
+            /**
+             * @return {object}
+             */
             viewData() {
                 const result = {};
 
                 this.config.attributes.forEach(attribute => {
-                    result[attribute.code] = {
+                    const item = {
                         label:    attribute.title,
                         required: attribute.validation && attribute.validation.required,
                         multiple: attribute.multiple,
@@ -72,45 +109,57 @@
                         attribute.type === CONFIG_ITEM_TYPE_MAP.FLOAT ||
                         attribute.type === CONFIG_ITEM_TYPE_MAP.STRING
                     ) {
-                        result[attribute.code].componentName = 'el-input';
+                        item.componentName = 'el-input';
 
                         if (attribute.type === CONFIG_ITEM_TYPE_MAP.INT) {
-                            result[attribute.code].attrs.type = 'number';
-                            result[attribute.code].attrs.step = 1;
+                            item.attrs.type = 'number';
+                            item.attrs.step = 1;
                         }
 
-                        result[attribute.code].listeners = {
+                        item.listeners = {
                             input: value => this.onChangeFormValue(attribute.code, value),
                         };
                     } else if (attribute.type === CONFIG_ITEM_TYPE_MAP.DATE) {
-                        result[attribute.code].componentName = 'el-date-picker';
+                        item.componentName = 'el-date-picker';
 
-                        result[attribute.code].listeners = {
-                            change: value => this.onChangeFormValue(attribute.code, value),
+                        item.listeners = {
+                            input: value => this.onChangeFormValue(attribute.code, value && value.toISOString()),
                         };
                     } else if (attribute.type === CONFIG_ITEM_TYPE_MAP.BOOLEAN) {
-                        result[attribute.code].componentName = 'el-checkbox';
+                        item.componentName = 'el-checkbox';
 
-                        result[attribute.code].listeners = {
+                        item.listeners = {
                             change: value => this.onChangeFormValue(attribute.code, value),
                         };
-                    } else if (attribute.type === CONFIG_ITEM_TYPE_MAP.enum) {
-                        result[attribute.code].componentName = 'el-select';
+                    } else if (attribute.type === CONFIG_ITEM_TYPE_MAP.ENUM) {
+                        item.componentName = 'el-cascader';
+
+                        item.attrs.options       = normalizeEnumListToOptions(ENUM_TYPES[attribute.enumType]);
+                        item.attrs.showAllLevels = false;
+                        item.attrs.props         = {
+                            emitPath: false,
+                        };
+
+                        item.listeners = {
+                            change: value => this.onChangeFormValue(attribute.code, value),
+                        };
                     }
+
+                    result[attribute.code] = item;
                 });
 
                 return result;
             },
 
+            /**
+             * @return {object}
+             */
             validationRules() {
                 const result = {};
 
                 this.config.attributes.forEach(attribute => {
                     if (attribute.validation) {
-                        result[attribute.code] = {
-                            ...attribute.validation,
-                            trigger: 'blur',
-                        };
+                        result[attribute.code] = { ...attribute.validation, trigger: 'blur' };
                     }
                 });
 
@@ -128,11 +177,15 @@
                 this.form[code] = value;
             },
 
-            onSubmitForm() {
-                this.$emit('update:model', this.form);
+            async onSubmitForm() {
+                const isValid = await this.$refs.form.validate();
+
+                if (isValid) {
+                    this.$emit('update:model', this.form);
+                } else {
+                    console.error('Form is invalid!!!');
+                }
             },
         },
     };
 </script>
-
-<style scoped lang="scss"></style>

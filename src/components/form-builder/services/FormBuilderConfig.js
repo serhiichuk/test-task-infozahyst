@@ -9,23 +9,25 @@ export const CONFIG_ITEM_TYPE_MAP = {
     STRING:  'string',
     DATE:    'date',
     BOOLEAN: 'boolean',
-    ENUM:    'enum'
+    ENUM:    'enum',
+};
+
+export const ENUM_TYPES = {
+    ImportanceValue,
+    JobPositionValue,
 };
 
 const CONFIG_ITEM_TYPES_FOR_RANGE_VALIDATION = [
     CONFIG_ITEM_TYPE_MAP.INT,
     CONFIG_ITEM_TYPE_MAP.FLOAT,
-    CONFIG_ITEM_TYPE_MAP.DATE
+    CONFIG_ITEM_TYPE_MAP.DATE,
 ];
 
-const CONFIG_ITEM_TYPES_FOR_LENGTH_VALIDATION = [CONFIG_ITEM_TYPE_MAP.STRING];
+const CONFIG_ITEM_TYPES_FOR_LENGTH_VALIDATION = [
+    CONFIG_ITEM_TYPE_MAP.STRING,
+];
 
 const CONFIG_ITEM_TYPES_LIST = Object.values(CONFIG_ITEM_TYPE_MAP);
-
-const ENUM_TYPES = {
-    ImportanceValue,
-    JobPositionValue
-};
 
 export default class FormBuilderConfig {
     /**
@@ -62,7 +64,7 @@ export default class FormBuilderConfig {
                           type = 'string',
                           validation,
                           enumType,
-                          multiple
+                          multiple,
                       }) {
         if (!_.isString(title)) {
             throw new TypeError('"title" should be a string if exist');
@@ -73,9 +75,7 @@ export default class FormBuilderConfig {
         }
 
         if (!CONFIG_ITEM_TYPES_LIST.includes(type)) {
-            throw new TypeError(
-                `'type' should be equal to one of that '${CONFIG_ITEM_TYPES_LIST}' values`
-            );
+            throw new TypeError(`"type" should be equal to one of that "${CONFIG_ITEM_TYPES_LIST}" values`);
         }
 
         if (validation && !_.isPlainObject(validation)) {
@@ -86,16 +86,8 @@ export default class FormBuilderConfig {
             throw new TypeError('"multiple" should be a boolean if exist');
         }
 
-        if (
-            type === CONFIG_ITEM_TYPE_MAP.ENUM &&
-            !Object.keys(ENUM_TYPES).includes(enumType)
-        ) {
-        debugger;
-            throw new TypeError(
-                `'enumType' should be equal to one of that '${Object.keys(
-                    ENUM_TYPES
-                )}' values`
-            );
+        if (type === CONFIG_ITEM_TYPE_MAP.ENUM && !Object.keys(ENUM_TYPES).includes(enumType)) {
+            throw new TypeError(`"enumType" should be equal to one of that "${Object.keys(ENUM_TYPES)}" values`);
         }
 
         if (validation) {
@@ -106,7 +98,7 @@ export default class FormBuilderConfig {
                       min,
                       max,
                       minlength,
-                      maxlength
+                      maxlength,
                   } = validation;
 
             if (required && !_.isBoolean(required)) {
@@ -148,7 +140,7 @@ export default class FormBuilderConfig {
             type,
             enumType,
             validation,
-            multiple
+            multiple,
         };
     }
 }
