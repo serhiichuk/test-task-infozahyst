@@ -1,22 +1,43 @@
 <template>
-    <div class="input-multiple">
+    <el-form-item v-bind="$attrs">
         <div class="el-input-container" v-for="input in inputs" :key="input.id">
-            <el-input class="el-input" size="mini" v-model="input.value">
-                <i class="el-icon-delete el-input__icon" slot="suffix" @click="onRemoveInput(input.id)"></i>
-            </el-input>
-        </div>
+            <component
+                    :is="componentName"
+                    v-bind="componentAttrs"
+                    v-model="input.value"
+            />
 
-        <el-button type="success" size="mini" @click="onAddInput">Додати</el-button>
-    </div>
+            <el-button type="danger" :size="$attrs.size" @click="onRemoveInput(input.id)">
+                Видалити
+            </el-button>
+        </div>
+        <el-button type="success" :size="$attrs.size" @click="onAddInput">
+            Додати
+        </el-button>
+    </el-form-item>
 </template>
 
 <script>
+    import _ from 'lodash';
+
     export default {
         props: {
-            value: {
+            componentName:  {
+                required: true,
+                type:     String,
+            },
+            componentAttrs: {
+                type: Object,
+            },
+            value:          {
                 required: true,
                 type:     Array,
             },
+        },
+
+        model: {
+            prop:  'value',
+            event: 'update:value',
         },
 
         data() {
@@ -47,7 +68,7 @@
             /**
              * @param {string} inputId
              */
-            onRemoveInput(inputId) {
+            onRemoveItemMultiple(inputId) {
                 this.inputs = this.inputs.filter(input => input.id !== inputId);
             },
         },

@@ -26,9 +26,9 @@
             title:      'Прізвище',
             code:       'lastName',
             validation: {
+                required:  true,
                 minlength: 3,
                 maxlength: 10,
-                required:  true,
             },
         },
         {
@@ -81,6 +81,14 @@
                 pattern: '^\\+38 \\(\\d{3}\\) \\d{3}-\\d{2}-\\d{2}$',
             },
         },
+        {
+            title:      'Card',
+            code:       'card',
+            multiple:   true,
+            validation: {
+                required: true
+            },
+        },
     ]);
 
     export default {
@@ -104,6 +112,7 @@
                     jobPosition: '',
                     startJobAt:  '',
                     phone:       [],
+                    card:       [],
                 },
             };
         },

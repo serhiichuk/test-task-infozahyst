@@ -1,33 +1,55 @@
 <template>
-    <el-form :id="config.code" :model="form" :rules="validationRules" ref="form">
-        <el-form-item
-                v-for="(item, code) in viewData"
-                :key="code"
-                :prop="code"
-                :label="item.label"
-                :required="item.required"
-        >
+    <el-form :model="form" ref="form">
+        <template v-for="item in formItems">
             <template v-if="item.multiple">
-                <input-multiple
-                        :componentName="item.componentName"
-                        :value="item.attrs.value"
-                        v-on="item.listeners"
-                />
+                <template v-for="itemMultiple in form[item.key]">
+                    <el-form-item
+                            :key="itemMultiple.key"
+                            :prop="itemMultiple.key"
+                            :label="item.label"
+                            :rules="item.rules"
+                    >
+                        <component
+                                :is="item.componentName"
+                                v-bind="item.attrs"
+                                v-model="itemMultiple.value"
+                        />
+                        <el-button type="danger" @click="onRemoveItemMultiple(item.key, itemMultiple.key)">
+                            Видалити
+                        </el-button>
+                    </el-form-item>
+                </template>
+
+                <el-button type="primary" @click="onAddItemMultiple(item.key)">Додати</el-button>
             </template>
+
             <template v-else>
-                <component :is="item.componentName" v-bind="item.attrs" v-on="item.listeners"/>
+                <el-form-item
+                        :key="item.key"
+                        :prop="item.key"
+                        :label="item.label"
+                        :rules="item.rules"
+                >
+                    <component
+                            :is="item.componentName"
+                            v-bind="item.attrs"
+                            v-model="form[item.key]"
+                    />
+                </el-form-item>
             </template>
-        </el-form-item>
+        </template>
 
         <el-form-item>
-            <el-button type="primary" @click="onSubmitForm">Зберегти</el-button>
+            <el-button type="success" @click="onSubmitForm">Зберегти</el-button>
         </el-form-item>
     </el-form>
 </template>
 
 <script>
+    import _ from 'lodash';
+
     import FormBuilderConfig, { CONFIG_ITEM_TYPE_MAP, ENUM_TYPES } from './services/FormBuilderConfig';
-    import InputMultiple from '@/components/intput-multiple';
+    import FormItemMultiple from '@/components/form-item-multiple';
 
     /**
      * @param {object[]} enumList
@@ -64,10 +86,66 @@
         return result;
     }
 
+    /**
+     * @param {*} value
+     * @param {string} key
+     * @param {number} index
+     * @return {{value: *, key: string}}
+     */
+    const getMultipleItemShape = (value, key, index) => ({ value, key: `${key}.${index}.value` });
+
+    /**
+     * @param {object} attribute
+     * @return {object}
+     * @constructor
+     */
+    const FORM_INPUT_COMMON_GETTER = attribute => ({
+        key:      attribute.code,
+        label:    attribute.title,
+        multiple: attribute.multiple,
+        rules:    {
+            ...(attribute.validation || {}),
+            trigger: ['change', 'blur'],
+        },
+    });
+
+    const CONFIG_ITEM_TYPE_TO_FORM_INPUT_GETTER_MAP = {
+        [CONFIG_ITEM_TYPE_MAP.INT]:     () => ({
+            componentName: 'el-input-number',
+            attrs:         { type: 'number' },
+            rules:         { type: 'integer' },
+        }),
+        [CONFIG_ITEM_TYPE_MAP.FLOAT]:   () => ({
+            componentName: 'el-input-number',
+            attrs:         { type: 'number', precision: 2 },
+            rules:         { type: 'number' },
+        }),
+        [CONFIG_ITEM_TYPE_MAP.STRING]:  () => ({
+            componentName: 'el-input',
+        }),
+        [CONFIG_ITEM_TYPE_MAP.DATE]:    () => ({
+            componentName: 'el-date-picker',
+            rules:         { type: 'date' },
+        }),
+        [CONFIG_ITEM_TYPE_MAP.BOOLEAN]: () => ({
+            componentName: 'el-checkbox',
+        }),
+        [CONFIG_ITEM_TYPE_MAP.ENUM]:    attribute => ({
+            componentName: 'el-cascader',
+            attrs:         {
+                showAllLevels: false,
+                props:         { emitPath: false },
+                options:       normalizeEnumListToOptions(ENUM_TYPES[attribute.enumType]),
+            },
+            rules:         { type: 'number' },
+        }),
+
+    };
+
     export default {
         name: 'FormBuilder',
 
-        components: { InputMultiple },
+        components: { FormItemMultiple },
 
         props: {
             config: {
@@ -82,103 +160,66 @@
 
         data() {
             return {
-                form: { ...this.model },
+                form: this.getInitForm(),
             };
         },
 
         computed: {
             /**
-             * @return {object}
+             * @return {object[]}
              */
-            viewData() {
-                const result = {};
-
-                this.config.attributes.forEach(attribute => {
-                    const item = {
-                        label:    attribute.title,
-                        required: attribute.validation && attribute.validation.required,
-                        multiple: attribute.multiple,
-                        attrs:    {
-                            size:  'mini',
-                            value: this.form[attribute.code],
-                        },
-                    };
-
-                    if (
-                        attribute.type === CONFIG_ITEM_TYPE_MAP.INT ||
-                        attribute.type === CONFIG_ITEM_TYPE_MAP.FLOAT ||
-                        attribute.type === CONFIG_ITEM_TYPE_MAP.STRING
-                    ) {
-                        item.componentName = 'el-input';
-
-                        if (attribute.type === CONFIG_ITEM_TYPE_MAP.INT) {
-                            item.attrs.type = 'number';
-                            item.attrs.step = 1;
-                        }
-
-                        item.listeners = {
-                            input: value => this.onChangeFormValue(attribute.code, value),
-                        };
-                    } else if (attribute.type === CONFIG_ITEM_TYPE_MAP.DATE) {
-                        item.componentName = 'el-date-picker';
-
-                        item.listeners = {
-                            input: value => this.onChangeFormValue(attribute.code, value && value.toISOString()),
-                        };
-                    } else if (attribute.type === CONFIG_ITEM_TYPE_MAP.BOOLEAN) {
-                        item.componentName = 'el-checkbox';
-
-                        item.listeners = {
-                            change: value => this.onChangeFormValue(attribute.code, value),
-                        };
-                    } else if (attribute.type === CONFIG_ITEM_TYPE_MAP.ENUM) {
-                        item.componentName = 'el-cascader';
-
-                        item.attrs.options       = normalizeEnumListToOptions(ENUM_TYPES[attribute.enumType]);
-                        item.attrs.showAllLevels = false;
-                        item.attrs.props         = {
-                            emitPath: false,
-                        };
-
-                        item.listeners = {
-                            change: value => this.onChangeFormValue(attribute.code, value),
-                        };
-                    }
-
-                    result[attribute.code] = item;
-                });
-
-                return result;
-            },
-
-            /**
-             * @return {object}
-             */
-            validationRules() {
-                const result = {};
-
-                this.config.attributes.forEach(attribute => {
-                    if (attribute.validation) {
-                        result[attribute.code] = { ...attribute.validation, trigger: 'blur' };
-                    }
-                });
-
-                return result;
+            formItems() {
+                return this.config.attributes.map(attribute => _.merge(
+                    FORM_INPUT_COMMON_GETTER(attribute),
+                    CONFIG_ITEM_TYPE_TO_FORM_INPUT_GETTER_MAP[attribute.type](attribute),
+                ));
             },
         },
 
         methods: {
             /**
-             * @param {string} code
-             * @param {any} value
+             * @return {object}
              */
-            onChangeFormValue(code, value) {
-                console.log(code, value);
-                this.form[code] = value;
+            getInitForm() {
+                /**
+                 * @param {*|array} value
+                 * @param {string} key
+                 * @return {{value: *, key: string}[]|*}
+                 */
+                const iteratee = (value, key) => {
+                    if (_.isArray(value)) {
+                        const values = value.length ? [...value] : [''];
+
+                        return values.map((val, index) => getMultipleItemShape(val, key, index));
+                    } else {
+                        return value;
+                    }
+                };
+
+                return _.mapValues(this.model, iteratee.bind(this));
+            },
+
+            /**
+             * @param {string} key
+             */
+            onAddItemMultiple(key) {
+                debugger
+                const index = this.form[key].length + 1;
+
+                this.form[key].push(getMultipleItemShape('', key, index));
+            },
+
+            /**
+             * @param {string} key
+             * @param {string} itemMultipleKey
+             */
+            onRemoveItemMultiple(key, itemMultipleKey) {
+                this.form[key] = this.form[key].filter(itemMultiple => itemMultiple.key !== itemMultipleKey);
             },
 
             async onSubmitForm() {
-                const isValid = await this.$refs.form.validate();
+//                const isValid = await this.$refs.form.validate();
+                const isValid = true;
 
                 if (isValid) {
                     this.$emit('update:model', this.form);
