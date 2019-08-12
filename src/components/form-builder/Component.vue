@@ -2,19 +2,23 @@
     <el-form :model="form" ref="form">
         <template v-for="item in formItems">
             <template v-if="item.multiple">
-                <template v-for="itemMultiple in form[item.key]">
+                <template v-for="(value, index) in form[item.key]">
                     <el-form-item
-                            :key="itemMultiple.key"
-                            :prop="itemMultiple.key"
+                            :key="getItemMultipleProp(item.key, index)"
+                            :prop="getItemMultipleProp(item.key, index)"
                             :label="item.label"
                             :rules="item.rules"
                     >
                         <component
                                 :is="item.componentName"
                                 v-bind="item.attrs"
-                                v-model="itemMultiple.value"
+                                v-model="form[item.key][index]"
                         />
-                        <el-button type="danger" @click="onRemoveItemMultiple(item.key, itemMultiple.key)">
+                        <el-button
+                                type="danger"
+                                :disabled="getIsDisabledItemMultipleBtn(item.key)"
+                                @click="onRemoveItemMultiple(item.key, index)"
+                        >
                             Видалити
                         </el-button>
                     </el-form-item>
@@ -49,7 +53,6 @@
     import _ from 'lodash';
 
     import FormBuilderConfig, { CONFIG_ITEM_TYPE_MAP, ENUM_TYPES } from './services/FormBuilderConfig';
-    import FormItemMultiple from '@/components/form-item-multiple';
 
     /**
      * @param {object[]} enumList
@@ -87,14 +90,6 @@
     }
 
     /**
-     * @param {*} value
-     * @param {string} key
-     * @param {number} index
-     * @return {{value: *, key: string}}
-     */
-    const getMultipleItemShape = (value, key, index) => ({ value, key: `${key}.${index}.value` });
-
-    /**
      * @param {object} attribute
      * @return {object}
      * @constructor
@@ -120,8 +115,13 @@
             attrs:         { type: 'number', precision: 2 },
             rules:         { type: 'number' },
         }),
-        [CONFIG_ITEM_TYPE_MAP.STRING]:  () => ({
+        [CONFIG_ITEM_TYPE_MAP.STRING]:  attribute => ({
             componentName: 'el-input',
+            rules:         {
+                min:  attribute.validation && attribute.validation.minlength,
+                max:  attribute.validation && attribute.validation.maxlength,
+                type: attribute.validation && attribute.validation.email ? 'email' : 'string',
+            },
         }),
         [CONFIG_ITEM_TYPE_MAP.DATE]:    () => ({
             componentName: 'el-date-picker',
@@ -135,6 +135,7 @@
             attrs:         {
                 showAllLevels: false,
                 props:         { emitPath: false },
+                filterable:    true,
                 options:       normalizeEnumListToOptions(ENUM_TYPES[attribute.enumType]),
             },
             rules:         { type: 'number' },
@@ -145,13 +146,12 @@
     export default {
         name: 'FormBuilder',
 
-        components: { FormItemMultiple },
-
         props: {
             config: {
                 required: true,
                 type:     FormBuilderConfig,
             },
+            // todo: add model constructor or validator
             model:  {
                 required: true,
                 type:     Object,
@@ -181,52 +181,58 @@
              * @return {object}
              */
             getInitForm() {
-                /**
-                 * @param {*|array} value
-                 * @param {string} key
-                 * @return {{value: *, key: string}[]|*}
-                 */
-                const iteratee = (value, key) => {
-                    if (_.isArray(value)) {
-                        const values = value.length ? [...value] : [''];
-
-                        return values.map((val, index) => getMultipleItemShape(val, key, index));
-                    } else {
-                        return value;
+                return _.mapValues(this.model, value => {
+                    if (_.isArray(value) && value.length === 0) {
+                        value.push('');
                     }
-                };
 
-                return _.mapValues(this.model, iteratee.bind(this));
+                    return value;
+                });
+            },
+
+            /**
+             * @param {string} key
+             */
+            getIsDisabledItemMultipleBtn(key) {
+                return this.form[key].length <= 1;
+            },
+
+            /**
+             * @param {string} key
+             * @param {number} index
+             */
+            getItemMultipleProp(key, index) {
+                return `${key}.${index}`;
             },
 
             /**
              * @param {string} key
              */
             onAddItemMultiple(key) {
-                debugger
-                const index = this.form[key].length + 1;
-
-                this.form[key].push(getMultipleItemShape('', key, index));
+                this.form[key].push('');
             },
 
             /**
              * @param {string} key
-             * @param {string} itemMultipleKey
+             * @param {number} index
              */
-            onRemoveItemMultiple(key, itemMultipleKey) {
-                this.form[key] = this.form[key].filter(itemMultiple => itemMultiple.key !== itemMultipleKey);
+            onRemoveItemMultiple(key, index) {
+                this.form[key].splice(index, 1);
             },
 
             async onSubmitForm() {
-//                const isValid = await this.$refs.form.validate();
-                const isValid = true;
-
-                if (isValid) {
-                    this.$emit('update:model', this.form);
-                } else {
-                    console.error('Form is invalid!!!');
-                }
+                this.$refs.form.validate(isValid => {
+                    if (isValid) {
+                        this.$emit('update:model', this.form);
+                    } else {
+                        console.error('Form is invalid!!!');
+                    }
+                });
             },
         },
     };
 </script>
+
+<style lang="scss">
+    // todo: add styling (:
+</style>

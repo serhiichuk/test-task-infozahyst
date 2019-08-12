@@ -29,6 +29,7 @@ const CONFIG_ITEM_TYPES_FOR_LENGTH_VALIDATION = [
 
 const CONFIG_ITEM_TYPES_LIST = Object.values(CONFIG_ITEM_TYPE_MAP);
 
+// todo: replace conditional validation to json-schema
 export default class FormBuilderConfig {
     /**
      * @param {string} code

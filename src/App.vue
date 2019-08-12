@@ -86,7 +86,7 @@
             code:       'card',
             multiple:   true,
             validation: {
-                required: true
+                required: true,
             },
         },
     ]);
@@ -108,11 +108,11 @@
                     age:         '',
                     height:      '',
                     email:       '',
-                    importance:  '',
-                    jobPosition: '',
-                    startJobAt:  '',
+                    importance:  null,
+                    jobPosition: null,
+                    startJobAt:  null,
                     phone:       [],
-                    card:       [],
+                    card:        [],
                 },
             };
         },
@@ -124,7 +124,7 @@
             onUpdateForm(form) {
                 this.personForm = { ...form };
 
-                console.log(this.personForm);
+                console.table(form);
             },
         },
     };
