@@ -1,5 +1,9 @@
 # tet-task-infozahyst
 
+## AC
+
+https://gist.github.com/stalniy/96f5fae34aac91395626afdbceb97f50
+
 ## Project setup
 ```
 yarn install
